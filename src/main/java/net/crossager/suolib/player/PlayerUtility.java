@@ -21,7 +21,7 @@ public class PlayerUtility {
         team.setPrefix(prefix);
         team.setSuffix(suffix);
         team.setColor(color);
-        team.addEntry(p.getName());
+        team.addEntry(getOfflinePlayerName(p.getUniqueId()));
     }
     public static void setPlayerNameTag(String s, String prefix, String suffix, ChatColor color){
         Team team;
@@ -40,16 +40,16 @@ public class PlayerUtility {
                     .getAsJsonObject().get("name").getAsString();
         } catch (Exception e){
             LogManager.getLogManager().getLogger("CrossagerAPI").log(Level.WARNING, "Couldn't get offline player name with uuid: " + id.toString());
-            return null;
+            return "";
         }
     }
     public static UUID getOfflinePlayerId(String name) {
         try {
-            URL url1 = new URL("https://api.mojang.com/users/profiles/minecraft/" + name);
-            return UUID.fromString(new JsonParser().parse(new InputStreamReader(url1.openStream())).getAsJsonObject().get("id").getAsString());
+            URL url = new URL("https://api.mojang.com/users/profiles/minecraft/" + name);
+            return UUID.fromString(new JsonParser().parse(new InputStreamReader(url.openStream())).getAsJsonObject().get("id").getAsString());
         } catch (Exception e){
             LogManager.getLogManager().getLogger("CrossagerAPI").log(Level.WARNING, "Couldn't get offline player id with name: " + name);
-            return null;
+            return UUID.fromString("");
         }
     }
 }
