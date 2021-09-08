@@ -3,5 +3,5 @@ version: ${project.version}
 main: net.crossager.suolib.SuoLib
 api-version: 1.17
 website: https://www.crossager.net/
-description: SuoLib (Spigot Utility Object Library), is a utility plugin for developers to make their plugin development easier.
+description: SuoLib (Spigot Utility Object Library), is a utility plugin for spigot/paper developers to make their plugin development easier.
 authors: [ Crossager ]
