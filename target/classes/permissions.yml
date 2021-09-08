@@ -1,0 +1,4 @@
+groups:
+  hello:
+    permissions:
+      - hey.pp
