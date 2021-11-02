@@ -1,9 +1,7 @@
 package net.crossager.suolib.ui;
 
-import org.bukkit.scoreboard.DisplaySlot;
-import org.bukkit.scoreboard.Objective;
-import org.bukkit.scoreboard.Score;
-import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.Bukkit;
+import org.bukkit.scoreboard.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,10 +9,15 @@ import java.util.List;
 public class ScoreboardDisplay {
     private List<Score> scores = new ArrayList<>();
     private List<String> scoresString = new ArrayList<>();
-    private Scoreboard scr = ScoreboardUtil.empty();
     private Objective obj;
-    public ScoreboardDisplay(String name){
-        obj = scr.registerNewObjective(ScoreboardUtil.getNewId(), "dummy", name);
+    public ScoreboardDisplay(String id, String name){
+        if (Bukkit.getScoreboardManager().getMainScoreboard().getObjective(id) != null) obj = Bukkit.getScoreboardManager().getMainScoreboard().getObjective(id);
+        else obj = Bukkit.getScoreboardManager().getMainScoreboard().registerNewObjective(ScoreboardUtil.getNewId(), "dummy", name);
+
+    }
+    public ScoreboardDisplay(String id){
+        if (Bukkit.getScoreboardManager().getMainScoreboard().getObjective(id) != null) obj = Bukkit.getScoreboardManager().getMainScoreboard().getObjective(id);
+        else obj = Bukkit.getScoreboardManager().getMainScoreboard().registerNewObjective(ScoreboardUtil.getNewId(), "dummy", "");
     }
     private void fromStringList(){
         scores.clear();
@@ -44,10 +47,6 @@ public class ScoreboardDisplay {
     public void setScores(List<String> newScores){
         scoresString = newScores;
         this.fromStringList();
-    }
-    public Scoreboard getScoreboard(){
-        obj.setDisplaySlot(DisplaySlot.SIDEBAR);
-        return scr;
     }
     public void setObjective(Objective objective){
         obj = objective;

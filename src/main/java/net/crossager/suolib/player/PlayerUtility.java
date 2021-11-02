@@ -1,6 +1,7 @@
 package net.crossager.suolib.player;
 
 import com.google.gson.JsonParser;
+import net.crossager.suolib.SuoLib;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
@@ -10,7 +11,6 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.UUID;
 import java.util.logging.Level;
-import java.util.logging.LogManager;
 
 public class PlayerUtility {
     public static void setPlayerNameTag(Player p, String prefix, String suffix, ChatColor color){
@@ -39,7 +39,7 @@ public class PlayerUtility {
             return new JsonParser().parse(new InputStreamReader(url.openStream()))
                     .getAsJsonObject().get("name").getAsString();
         } catch (Exception e){
-            LogManager.getLogManager().getLogger("CrossagerAPI").log(Level.WARNING, "Couldn't get offline player name with uuid: " + id.toString());
+            SuoLib.getPlugin().getLogger().log(Level.WARNING, "Couldn't get offline player name with uuid: " + id.toString());
             return "";
         }
     }
@@ -48,8 +48,8 @@ public class PlayerUtility {
             URL url = new URL("https://api.mojang.com/users/profiles/minecraft/" + name);
             return UUID.fromString(new JsonParser().parse(new InputStreamReader(url.openStream())).getAsJsonObject().get("id").getAsString());
         } catch (Exception e){
-            LogManager.getLogManager().getLogger("CrossagerAPI").log(Level.WARNING, "Couldn't get offline player id with name: " + name);
-            return UUID.fromString("");
+            SuoLib.getPlugin().getLogger().log(Level.WARNING, "Couldn't get offline player id with name: " + name);
+            return UUID.randomUUID();
         }
     }
 }
