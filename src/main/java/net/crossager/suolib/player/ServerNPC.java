@@ -1,13 +1,14 @@
-package net.crossager.suolib.server;
+package net.crossager.suolib.player;
 
-import com.destroystokyo.paper.event.player.PlayerUseUnknownEntityEvent;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
 import net.crossager.suolib.SuoLib;
-import net.crossager.suolib.player.PlayerUtility;
-import net.minecraft.network.chat.IChatBaseComponent;
+import net.crossager.suolib.events.PlayerAttackInvalidEntityEvent;
+import net.crossager.suolib.events.PlayerUseInvalidEntityEvent;
+import net.crossager.suolib.util.NMSUtils;
+import net.crossager.suolib.util.Utils;
 import net.minecraft.network.protocol.game.*;
 import net.minecraft.network.syncher.DataWatcher;
 import net.minecraft.network.syncher.DataWatcherRegistry;
@@ -15,14 +16,8 @@ import net.minecraft.server.level.EntityPlayer;
 import net.minecraft.server.network.PlayerConnection;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.decoration.EntityArmorStand;
-import net.minecraft.world.scores.ScoreboardTeam;
-import net.minecraft.world.scores.ScoreboardTeamBase;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.craftbukkit.v1_17_R1.CraftServer;
-import org.bukkit.craftbukkit.v1_17_R1.CraftWorld;
-import org.bukkit.craftbukkit.v1_17_R1.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_17_R1.scoreboard.CraftScoreboard;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -30,6 +25,8 @@ import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.plugin.Plugin;
 
 import java.io.InputStreamReader;
 import java.net.URL;
@@ -40,40 +37,39 @@ public class ServerNPC implements Listener {
 
     private Location loc;
 
-    private String name;
+    private final String name;
 
-    private int id;
-
-    private EntityPlayer entity;
+    private final EntityPlayer entity;
 
     private EntityArmorStand hologram;
 
     private String[] skin = {"", ""};
 
-    private GameProfile profile;
+    private final GameProfile profile;
+
+    private PlayerEntityInteraction click = (a, b, c) -> {};
 
     private boolean lookAtPlayer = true;
 
-    private boolean isHologram;
+    private final boolean isHologram;
 
-    public ServerNPC(Location loc, String name){
-        Bukkit.getServer().getPluginManager().registerEvents(this, SuoLib.getPlugin());
+    public ServerNPC(String name, Location loc){
+        this(name, loc, SuoLib.getProvider().getPlugin());
+    }
+    public ServerNPC(String name, Location loc, Plugin plugin){
+        Bukkit.getServer().getPluginManager().registerEvents(this, plugin);
         this.loc = loc;
         this.name = name;
         isHologram = name.length() > 16;
         if (isHologram){
             profile = new GameProfile(UUID.randomUUID(), "");
-            hologram = new EntityArmorStand(EntityTypes.c, ((CraftWorld)loc.getWorld()).getHandle());
+            hologram = new EntityArmorStand(EntityTypes.c, NMSUtils.getHandle(loc.getWorld()));
         } else {
             profile = new GameProfile(UUID.randomUUID(), name);
         }
 
-        entity = new EntityPlayer(((CraftServer) Bukkit.getServer()).getServer(), ((CraftWorld)loc.getWorld()).getHandle(), profile);
-        entity.setLocation(loc.getX(), loc.getY(), loc.getZ(), loc.getPitch(), loc.getYaw());
-    }
-
-    public void click(ServerNPCClick click){
-
+        entity = new EntityPlayer(NMSUtils.getServer(Bukkit.getServer()), NMSUtils.getHandle(loc.getWorld()), profile);
+        entity.b(loc.getX(), loc.getY(), loc.getZ(), loc.getPitch(), loc.getYaw());
     }
 
     public void setSkin(String[] s){
@@ -89,14 +85,14 @@ public class ServerNPC implements Listener {
         String[] skin = {"", ""};
         try {
             URL url2 = new URL("https://sessionserver.mojang.com/session/minecraft/profile/" + s.toString() + "?unsigned=false");
-            JsonObject property = new JsonParser().parse(new InputStreamReader(url2.openStream()))
+            JsonObject property = JsonParser.parseReader(new InputStreamReader(url2.openStream()))
                     .getAsJsonObject().get("properties").getAsJsonArray().get(0).getAsJsonObject();
             String value = property.get("value").getAsString();
             String name = property.get("signature").getAsString();
             skin = new String[]{value, name};
             setSkin(skin);
         } catch (Exception e) {
-            SuoLib.getPlugin().getLogger().log(Level.SEVERE, "Error whilst pulling npc skin, switched to default.");
+            Utils.log(Level.SEVERE, "Error whilst pulling npc skin, switched to default.");
             setSkin(skin);
         }
         return skin;
@@ -112,6 +108,18 @@ public class ServerNPC implements Listener {
 
     public void setLookAtPlayer(boolean lookAtPlayer) {
         this.lookAtPlayer = lookAtPlayer;
+    }
+
+    public void setOnClick(PlayerEntityInteraction click) {
+        this.click = click;
+    }
+
+    public PlayerEntityInteraction getOnClick() {
+        return click;
+    }
+
+    public void setLocation(Location loc) {
+        this.loc = loc;
     }
 
     // handling
@@ -133,16 +141,16 @@ public class ServerNPC implements Listener {
         registered.clear();
         loaded.clear();
     }
-
     private void sendPlayer(Player p){
-        PlayerConnection con = ((CraftPlayer)p).getHandle().b;
-        DataWatcher watcher = entity.getDataWatcher();
+
+        PlayerConnection con = NMSUtils.getHandle(p).b;
+        DataWatcher watcher = entity.ai();
         byte b = 0x01 | 0x02 | 0x04 | 0x08 | 0x10 | 0x20 | 0x40;
-        watcher.set(DataWatcherRegistry.a.a(17), b);
-        con.sendPacket(new PacketPlayOutPlayerInfo(PacketPlayOutPlayerInfo.EnumPlayerInfoAction.a, entity));
-        con.sendPacket(new PacketPlayOutNamedEntitySpawn(entity));
-        con.sendPacket(new PacketPlayOutEntityHeadRotation(entity, (byte) (loc.getYaw() * 256 / 360)));
-        con.sendPacket(new PacketPlayOutEntityMetadata(entity.getId(), watcher, true));
+        watcher.b(DataWatcherRegistry.a.a(17), b);
+        con.a(new PacketPlayOutPlayerInfo(PacketPlayOutPlayerInfo.EnumPlayerInfoAction.a, entity));
+        con.a(new PacketPlayOutNamedEntitySpawn(entity));
+        con.a(new PacketPlayOutEntityHeadRotation(entity, (byte) (loc.getYaw() * 256 / 360)));
+        con.a(new PacketPlayOutEntityMetadata(entity.ae(), watcher, true));
         if (isHologram){
 //            ScoreboardTeam team = new ScoreboardTeam(
 //                ((CraftScoreboard)Bukkit.getScoreboardManager().getMainScoreboard()).getHandle(), "");
@@ -154,41 +162,40 @@ public class ServerNPC implements Listener {
 //            con.sendPacket(score2);
 //            con.sendPacket(score3);
             hologram.a(loc.getX(), loc.getY() + 0.8, loc.getZ());
-            hologram.setCustomNameVisible(true);
-            hologram.setCustomName(IChatBaseComponent.a(name));
-            hologram.setInvisible(true);
-            hologram.setInvulnerable(true);
-            hologram.setSmall(true);
+            hologram.a(true);
+            hologram.a(NMSUtils.toChatBaseComponent(name));
+            hologram.n(true);
+            hologram.persistentInvisibility = true;
+            hologram.b(5, true);
+            hologram.m(true);
             hologram.collidableExemptions.add(p.getUniqueId());
-            DataWatcher amw = hologram.getDataWatcher();
-            byte a = 0x01 | 0x10 | 0x20;
-            watcher.set(DataWatcherRegistry.a.a(17), a);
-            con.sendPacket(new PacketPlayOutSpawnEntityLiving(hologram));
-            con.sendPacket(new PacketPlayOutEntityMetadata(hologram.getId(), amw, true));
+            DataWatcher amw = hologram.ai();
+            con.a(new PacketPlayOutSpawnEntityLiving(hologram));
+            con.a(new PacketPlayOutEntityMetadata(hologram.ae(), amw, true));
 
         }
-        con.sendPacket(new PacketPlayOutPlayerInfo(PacketPlayOutPlayerInfo.EnumPlayerInfoAction.e, entity));
+        con.a(new PacketPlayOutPlayerInfo(PacketPlayOutPlayerInfo.EnumPlayerInfoAction.e, entity));
     }
 
     private void rotate(Player p){
         Location npcloc = loc;
         npcloc = npcloc.setDirection(p.getLocation().subtract(npcloc).toVector());
-        PlayerConnection connection = ((CraftPlayer) p).getHandle().b;
+        PlayerConnection connection = NMSUtils.getHandle(p).b;
         float yaw = npcloc.getYaw();
         float pitch = npcloc.getPitch();
-        connection.sendPacket(new PacketPlayOutEntity.PacketPlayOutEntityLook(entity.getId(), (byte) ((yaw%360.)*256/360), (byte) ((pitch%360.)*256/360), false));
-        connection.sendPacket(new PacketPlayOutEntityHeadRotation(entity, (byte) ((yaw%360.)*256/360)));
+        connection.a(new PacketPlayOutEntity.PacketPlayOutEntityLook(entity.ae(), (byte) ((yaw%360.)*256/360), (byte) ((pitch%360.)*256/360), false));
+        connection.a(new PacketPlayOutEntityHeadRotation(entity, (byte) ((yaw%360.)*256/360)));
     }
 
     private void destroy(Player p){
-        PlayerConnection con = ((CraftPlayer) p).getHandle().b;
-        con.sendPacket(new PacketPlayOutEntityDestroy(entity.getId()));
-        if (isHologram) con.sendPacket(new PacketPlayOutEntityDestroy(hologram.getId()));
+        PlayerConnection con = NMSUtils.getHandle(p).b;
+        con.a(new PacketPlayOutEntityDestroy(entity.ae()));
+        if (isHologram) con.a(new PacketPlayOutEntityDestroy(hologram.ae()));
     }
 
     private void removePlayer(Player p) {
-        PlayerConnection con = ((CraftPlayer) p).getHandle().b;
-        con.sendPacket(new PacketPlayOutPlayerInfo(PacketPlayOutPlayerInfo.EnumPlayerInfoAction.e, entity));
+        PlayerConnection con = NMSUtils.getHandle(p).b;
+        con.a(new PacketPlayOutPlayerInfo(PacketPlayOutPlayerInfo.EnumPlayerInfoAction.e, entity));
         destroy(p);
     }
 
@@ -216,16 +223,15 @@ public class ServerNPC implements Listener {
     private int clicked = 0;
 
     @EventHandler
-    public void entity(PlayerUseUnknownEntityEvent e){
-        if(e.getEntityId() == entity.getId() ||e.getEntityId() == hologram.getId()){
-            if (!e.isAttack()){
-                clicked++;
-                if (clicked == 4){
-                    clicked = 0;
-                    click(new ServerNPCClick(e.getPlayer(), e.getHand(), false));
-                }
-            } else
-                click(new ServerNPCClick(e.getPlayer(), e.getHand(), true));
+    public void entity(PlayerUseInvalidEntityEvent e){
+        if(e.getEntityId() == entity.ae() || (isHologram ? hologram.ae() == e.getEntityId(): false)) {
+            if(EquipmentSlot.HAND.equals(e.getHand())) click.click(e.getPlayer(), e.getHand(), false);
+        }
+    }
+    @EventHandler
+    public void entity(PlayerAttackInvalidEntityEvent e){
+        if(e.getEntityId() == entity.ae() || (isHologram ? hologram.ae() == e.getEntityId(): false)){
+            click.click(e.getPlayer(), EquipmentSlot.HAND, true);
         }
     }
 
