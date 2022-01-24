@@ -124,8 +124,6 @@ public class ServerNPC implements Listener {
 
     // handling
 
-    private Set<Player> registered = new HashSet<>();
-
     private Set<Player> loaded = new HashSet<>();
 
     public void spawn(){
@@ -135,10 +133,9 @@ public class ServerNPC implements Listener {
     }
 
     public void remove(){
-        for (Player p : registered){
+        for (Player p : loaded){
             removePlayer(p);
         }
-        registered.clear();
         loaded.clear();
     }
     private void sendPlayer(Player p){
@@ -152,15 +149,6 @@ public class ServerNPC implements Listener {
         con.a(new PacketPlayOutEntityHeadRotation(entity, (byte) (loc.getYaw() * 256 / 360)));
         con.a(new PacketPlayOutEntityMetadata(entity.ae(), watcher, true));
         if (isHologram){
-//            ScoreboardTeam team = new ScoreboardTeam(
-//                ((CraftScoreboard)Bukkit.getScoreboardManager().getMainScoreboard()).getHandle(), "");
-//            team.setNameTagVisibility(ScoreboardTeamBase.EnumNameTagVisibility.b);
-//            PacketPlayOutScoreboardTeam score1 = PacketPlayOutScoreboardTeam.a(team);
-//            PacketPlayOutScoreboardTeam score2 = PacketPlayOutScoreboardTeam.a(team, true);
-//            PacketPlayOutScoreboardTeam score3 = PacketPlayOutScoreboardTeam.a(team, "", PacketPlayOutScoreboardTeam.a.a);
-//            con.sendPacket(score1);
-//            con.sendPacket(score2);
-//            con.sendPacket(score3);
             hologram.a(loc.getX(), loc.getY() + 0.8, loc.getZ());
             hologram.a(true);
             hologram.a(NMSUtils.toChatBaseComponent(name));
@@ -216,12 +204,8 @@ public class ServerNPC implements Listener {
 
     @EventHandler
     public void quit(PlayerQuitEvent e){
-        registered.remove(e.getPlayer());
         loaded.remove(e.getPlayer());
     }
-
-    private int clicked = 0;
-
     @EventHandler
     public void entity(PlayerUseInvalidEntityEvent e){
         if(e.getEntityId() == entity.ae() || (isHologram ? hologram.ae() == e.getEntityId(): false)) {
@@ -242,7 +226,6 @@ public class ServerNPC implements Listener {
                 loaded.remove(p);
             }
             if (p.getLocation().distance(loc) < 64 && !loaded.contains(p)){
-                if (!registered.contains(p)) registered.add(p);
                 sendPlayer(p);
                 loaded.add(p);
             }

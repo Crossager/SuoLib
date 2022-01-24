@@ -42,7 +42,7 @@ public class PacketReader implements Listener {
         try {
             channel.pipeline().addAfter("decoder", "PacketInReader", new MessageToMessageDecoder<Packet<? extends PacketListener>>() {
                 @Override
-                protected void decode(ChannelHandlerContext channelHandlerContext, Packet<? extends PacketListener> packet, List<Object> list) throws Exception {
+                protected void decode(ChannelHandlerContext channelHandlerContext, Packet<? extends PacketListener> packet, List<Object> list) {
                     try {
                         boolean cancelled = false;
                         for (net.crossager.suolib.protocol.PacketListener<? extends Packet<? extends PacketListener>> listener : pm.getListeners()) {
@@ -66,7 +66,7 @@ public class PacketReader implements Listener {
         try {
             channel.pipeline().addAfter("encoder", "PacketOutReader", new MessageToMessageEncoder<Packet<?>>() {
                 @Override
-                protected void encode(ChannelHandlerContext channelHandlerContext, Packet<?> packet, List<Object> list) throws Exception {
+                protected void encode(ChannelHandlerContext channelHandlerContext, Packet<?> packet, List<Object> list) {
                     try {
                         boolean cancelled = true;
                         for (net.crossager.suolib.protocol.PacketListener<? extends Packet<? extends PacketListener>> listener : pm.getListeners()) {

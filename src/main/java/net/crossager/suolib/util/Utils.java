@@ -41,4 +41,10 @@ public class Utils {
     public static void log(Level l,String s){
         Logger.getLogger("SuoLib").log(l, s);
     }
+
+    public static OSType getSystemOS(){
+        String s = System.getProperty("os.name").toLowerCase();
+        return s.contains("win") ? OSType.WINDOWS : (s.contains("mac") ? OSType.OSX : (s.contains("solaris") ? OSType.SOLARIS :
+                (s.contains("sunos") ? OSType.SOLARIS : (s.contains("linux") ? OSType.LINUX : (s.contains("unix") ? OSType.LINUX : OSType.UNKNOWN)))));
+    }
 }

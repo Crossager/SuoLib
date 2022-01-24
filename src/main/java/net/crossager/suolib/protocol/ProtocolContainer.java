@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
-public class ProtocolContainer<T extends PacketListener> {
+public final class ProtocolContainer<T extends PacketListener> {
     private Object handle;
 
     private final Object2IntMap<Class<? extends Packet<T>>> packetIds;

@@ -78,7 +78,6 @@ public class Hologram implements Listener {
     /**
      * Handling
      */
-    private Set<Player> registered = new HashSet<>();
 
     private Set<Player> loaded = new HashSet<>();
 
@@ -92,17 +91,15 @@ public class Hologram implements Listener {
     }
 
     public void remove(){
-        for (Player p : registered){
+        for (Player p : loaded){
             destroy(p);
         }
         spawned = false;
-        registered.clear();
         loaded.clear();
     }
 
     private void sendName(Player p){
         PlayerConnection con = NMSUtils.getHandle(p).b;
-//        hologram.a(CraftChatMessage.fromStringOrNull(text))
         hologram.a(NMSUtils.toChatBaseComponent(text));
         DataWatcher amw = hologram.ai();
         con.a(new PacketPlayOutEntityMetadata(hologram.ae(), amw, true));
@@ -149,11 +146,9 @@ public class Hologram implements Listener {
     @EventHandler
     public void quit(PlayerQuitEvent e){
         if(spawned) {
-            registered.remove(e.getPlayer());
             loaded.remove(e.getPlayer());
         }
     }
-    private int clicked = 0;
 
     @EventHandler
     public void entity(PlayerUseInvalidEntityEvent e){
@@ -174,7 +169,6 @@ public class Hologram implements Listener {
                 loaded.remove(p);
             }
             if (p.getLocation().distance(loc) < 64 && !loaded.contains(p)){
-                if (!registered.contains(p)) registered.add(p);
                 send(p);
                 loaded.add(p);
             }

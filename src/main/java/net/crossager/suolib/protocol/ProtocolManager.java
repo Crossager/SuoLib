@@ -10,7 +10,7 @@ import net.minecraft.network.protocol.login.PacketLoginOutListener;
 import net.minecraft.network.protocol.status.PacketStatusInListener;
 import net.minecraft.network.protocol.status.PacketStatusOutListener;
 
-public class ProtocolManager {
+public final class ProtocolManager {
     public final Play PLAY = new Play();
     public final Status STATUS = new Status();
     public final Login LOGIN = new Login();

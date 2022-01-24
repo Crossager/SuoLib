@@ -69,7 +69,7 @@ public final class SuoLib extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
-        Bukkit.getOnlinePlayers().forEach(p -> provider.getPacketReader().uninject(p));
+        Bukkit.getOnlinePlayers().forEach(provider.getPacketReader()::uninject);
     }
 
     private void addPacketListeners(){
